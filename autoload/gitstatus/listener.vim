@@ -38,7 +38,7 @@ function! s:Listener.callback(event) abort
     call l:path.flagSet.clearFlags('git')
     if l:indicator !=# ''
         if gitstatus#shouldConceal()
-            let l:indicator = printf(' %s ', l:indicator)
+            let l:indicator = printf(self.getOption('ConcealFormat', ' %s '), l:indicator)
         endif
         call l:path.flagSet.addFlag('git', l:indicator)
     endif

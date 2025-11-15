@@ -45,6 +45,7 @@ let s:default_vals = {
             \ 'g:NERDTreeGitStatusDirDirtyOnly':       1,
             \ 'g:NERDTreeGitStatusConcealBrackets':    0,
             \ 'g:NERDTreeGitStatusAlignIfConceal':     1,
+            \ 'g:NERDTreeGitStatusConcealFormat':      ' %s ',
             \ 'g:NERDTreeGitStatusShowClean':          0,
             \ 'g:NERDTreeGitStatusLogLevel':           2,
             \ 'g:NERDTreeGitStatusPorcelainVersion':   2,
