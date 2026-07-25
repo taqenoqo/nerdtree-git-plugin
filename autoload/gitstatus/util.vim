@@ -57,6 +57,18 @@ function! gitstatus#util#BuildGitWorkdirCommand(root, opts) abort
 endfunction
 
 function! gitstatus#util#BuildGitStatusCommand(root, opts) abort
+    let l:ref = get(a:opts, 'NERDTreeGitStatusDiffRef', '')
+    if !empty(l:ref)
+        return [
+                    \ get(a:opts, 'NERDTreeGitStatusGitBinPath', 'git'),
+                    \ '-C', a:root,
+                    \ 'diff',
+                    \ '--name-status',
+                    \ '-z',
+                    \ l:ref,
+                    \ ]
+    endif
+
     let l:cmd = [
                 \ get(a:opts, 'NERDTreeGitStatusGitBinPath', 'git'),
                 \ '-C', a:root,
@@ -83,7 +95,41 @@ function! gitstatus#util#BuildGitStatusCommand(root, opts) abort
     return l:cmd
 endfunction
 
+let s:diff_status_keys = {
+            \ 'M': 'Modified',
+            \ 'A': 'Staged',
+            \ 'D': 'Deleted',
+            \ 'R': 'Renamed',
+            \ 'C': 'Renamed',
+            \ 'T': 'Modified',
+            \ 'U': 'Unmerged',
+            \ }
+
+" 'git diff --name-status -z' はステータスとパスを別レコードで並べる。
+" R/C はスコアが付き (R100)、旧パスと新パスが順に続く。
+function! s:parseGitDiffLines(root, diffLines, opts) abort
+    let l:result = {}
+    let l:i = 0
+    while l:i < len(a:diffLines)
+        let l:statusKey = get(s:diff_status_keys, a:diffLines[l:i][0], 'Unknown')
+        if l:statusKey is# 'Renamed'
+            call gitstatus#util#UpdateParentDirsStatus(l:result, a:root, a:root . '/' . a:diffLines[l:i + 1], 'Dirty', a:opts)
+            let l:i += 1
+        endif
+
+        let l:pathStr = a:root . '/' . a:diffLines[l:i + 1]
+        let l:result[l:pathStr] = l:statusKey
+        call gitstatus#util#UpdateParentDirsStatus(l:result, a:root, l:pathStr, l:statusKey, a:opts)
+        let l:i += 2
+    endwhile
+    return l:result
+endfunction
+
 function! gitstatus#util#ParseGitStatusLines(root, statusLines, opts) abort
+    if !empty(get(a:opts, 'NERDTreeGitStatusDiffRef', ''))
+        return s:parseGitDiffLines(a:root, a:statusLines, a:opts)
+    endif
+
     let l:result = {}
     let l:is_rename = 0
     for l:line in a:statusLines
