@@ -107,3 +107,36 @@ function! s:suite.UpdateParentDirsStatus() abort
     call gitstatus#util#UpdateParentDirsStatus(l:cache, l:root, '/root/dir1/file1', 'Staged', l:opts)
     call s:assert.equal({'/root/dir1': 'Dirty','/root/dir1/file1': 'Staged', '/root/dir1/dir2': 'Untracked', '/root/dir1/dir2/dir3': 'Untracked'}, l:cache)
 endfunction
+
+function! s:suite.BuildGitStatusCommandWithDiffRef() abort
+    let l:cmd = gitstatus#util#BuildGitStatusCommand('/workdir', {
+                \ 'NERDTreeGitStatusDiffRef': 'origin/main'
+                \ })
+    call s:assert.equal(l:cmd, ['git', '-C', '/workdir', 'diff', '--name-status', '-z', 'origin/main'])
+
+    let l:cmd = gitstatus#util#BuildGitStatusCommand('/workdir', {
+                \ 'NERDTreeGitStatusDiffRef': 'origin/main...',
+                \ 'NERDTreeGitStatusShowIgnored': 1,
+                \ 'NERDTreeGitStatusGitBinPath': '/path/to/git'
+                \ })
+    call s:assert.equal(l:cmd, ['/path/to/git', '-C', '/workdir', 'diff', '--name-status', '-z', 'origin/main...'])
+
+    let l:cmd = gitstatus#util#BuildGitStatusCommand('/workdir', {
+                \ 'NERDTreeGitStatusDiffRef': ''
+                \ })
+    call s:assert.equal(l:cmd, ['git', '-C', '/workdir', 'status', '--porcelain=v2', '-z'])
+endfunction
+
+function! s:suite.ParseGitDiffLines() abort
+    let l:opts = {'NERDTreeGitStatusDiffRef': 'origin/main'}
+    let l:lines = ['M', 'dir1/file1', 'A', 'file2', 'D', 'file3', 'R100', 'dir2/old', 'dir3/new']
+    call s:assert.equal(gitstatus#util#ParseGitStatusLines('/root', l:lines, l:opts), {
+                \ '/root/dir1': 'Dirty',
+                \ '/root/dir1/file1': 'Modified',
+                \ '/root/file2': 'Staged',
+                \ '/root/file3': 'Deleted',
+                \ '/root/dir2': 'Dirty',
+                \ '/root/dir3': 'Dirty',
+                \ '/root/dir3/new': 'Renamed',
+                \ })
+endfunction

@@ -54,6 +54,7 @@ let s:default_vals = {
             \ 'g:NERDTreeGitStatusMapPrevHunk':        '[c',
             \ 'g:NERDTreeGitStatusUntrackedFilesMode': 'normal',
             \ 'g:NERDTreeGitStatusGitBinPath':         'git',
+            \ 'g:NERDTreeGitStatusDiffRef':            '',
             \ }
 
 for [s:var, s:value] in items(s:default_vals)
@@ -152,11 +153,21 @@ function! s:refreshGitStatus(name, workdir) abort
     let l:opts =  {
                 \ 'on_failed_cb': function('s:onGitStatusFailedCB'),
                 \ 'on_success_cb': function('s:onGitStatusSuccessCB'),
-                \ 'cwd': a:workdir
+                \ 'cwd': a:workdir,
+                \ 'diff_ref': g:NERDTreeGitStatusDiffRef
                 \ }
     let l:job = gitstatus#job#Spawn(a:name, s:buildGitStatusCommand(a:workdir), l:opts)
     return l:job
 endfunction
+
+function! s:setDiffRef(ref) abort
+    let g:NERDTreeGitStatusDiffRef = a:ref
+    if exists('g:NTGitWorkdir')
+        call s:refreshGitStatus('diff-ref', g:NTGitWorkdir)
+    endif
+endfunction
+
+command! -nargs=? NERDTreeGitStatusDiffRef call s:setDiffRef(<q-args>)
 
 " vint: -ProhibitUnusedVariable
 function! s:onGitStatusSuccessCB(job) abort
@@ -164,6 +175,12 @@ function! s:onGitStatusSuccessCB(job) abort
         call s:logger.debug(printf("git workdir has changed: '%s' -> '%s'", a:job.opts.cwd, get(g:, 'NTGitWorkdir', '')))
         return
     endif
+
+    if get(a:job.opts, 'diff_ref', '') !=# g:NERDTreeGitStatusDiffRef
+        call s:logger.debug(printf("diff ref has changed: '%s' -> '%s'", get(a:job.opts, 'diff_ref', ''), g:NERDTreeGitStatusDiffRef))
+        return
+    endif
+
     let l:output = join(a:job.chunks, '')
     let l:lines = split(l:output, "\n")
     let l:cache = gitstatus#util#ParseGitStatusLines(a:job.opts.cwd, l:lines, g:)
