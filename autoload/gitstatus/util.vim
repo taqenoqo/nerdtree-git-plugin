@@ -105,8 +105,6 @@ let s:diff_status_keys = {
             \ 'U': 'Unmerged',
             \ }
 
-" 'git diff --name-status -z' はステータスとパスを別レコードで並べる。
-" R/C はスコアが付き (R100)、旧パスと新パスが順に続く。
 function! s:parseGitDiffLines(root, diffLines, opts) abort
     let l:result = {}
     let l:i = 0
